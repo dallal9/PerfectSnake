@@ -10,12 +10,11 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import matplotlib.pyplot as plt
-
-
+#https://www.edureka.co/blog/snake-game-with-pygame/
 pygame.init()
  
 white = (255, 255, 255)
-yellow = (255, 255, 102)
+yellow = (155,135,12)
 black = (0, 0, 0)
 red = (255,0,0)#(213, 50, 80)
 green = (0, 255, 0)
@@ -165,22 +164,25 @@ def gameLoop():
     maze.generate_cycle()
     print(maze.path)
     
+    step_count=0
     def next_step(head):
         head2 = head[0], maze.h - 1 - head[1]
         current_index = maze.path.index(head2)
         next_coor = maze.path[(current_index+1)%len(maze.path)]
         step = tuple(np.array(head2)-np.array(next_coor))
-        print(next_coor)
-        print(head2)
-        print(step)
+
         # input('>')
         if step == (1,0):
+            print("left")
             return LEFT
         elif step == (-1, 0):
+            print("right")
             return RIGHT
         elif step == (0, 1):
+            print("down")
             return DOWN
         else:
+            print("up")
             return UP
 
     x1 = maze.start.x #dis_width / 2
@@ -198,7 +200,14 @@ def gameLoop():
         
         while game_close == True:
             dis.fill(black)
-            message("You Lost! Press C-Play Again or Q-Quit", red)
+            score=Length_of_snake - 1
+
+            if score == (maze_w * maze_h) -1 :
+                message("You Won! Press C-Play Again or Q-Quit", blue)
+ 
+            else:
+                message("You Lost! Press\n C-Play Again or \nQ-Quit", red)
+
             Your_score(Length_of_snake - 1)
             pygame.display.update()
  
@@ -206,6 +215,7 @@ def gameLoop():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_q:
                         game_over = True
+
                         game_close = False
                     if event.key == pygame.K_c:
                         gameLoop()
@@ -215,6 +225,7 @@ def gameLoop():
         #         game_over = True
             # print((x1//snake_block, y1//snake_block))
         step = next_step((x1//snake_block, y1//snake_block))
+        step_count+=1
             # if event.type == pygame.KEYDOWN:
                 #i = random.randint(1,4)
         if step == LEFT:
@@ -248,7 +259,7 @@ def gameLoop():
         snake_Head.append(x1)
         snake_Head.append(y1)
         snake_List.append(snake_Head)
-        print('555555555555555555555555555555555')
+        print('_________________')
         
         if len(snake_List) > Length_of_snake:
             del snake_List[0]
@@ -256,15 +267,20 @@ def gameLoop():
         for x in snake_List[:-1]:
             if x == snake_Head:
                 game_close = True
- 
+
+        if Length_of_snake == (maze_w * maze_h):
+            game_close=True 
+            continue
+
         our_snake(snake_block, snake_List)
         Your_score(Length_of_snake - 1)
  
         pygame.display.update()
  
         if x1 == foodx and y1 == foody:
-            foodx = round(random.randrange(0, dis_width - snake_block) / 10.0) * 10.0
-            foody = round(random.randrange(0, dis_height - snake_block) / 10.0) * 10.0
+            while [foodx ,foody] in snake_List:
+                foodx = round(random.randrange(0, dis_width - snake_block) / 10.0) * 10.0
+                foody = round(random.randrange(0, dis_height - snake_block) / 10.0) * 10.0
             Length_of_snake += 1
  
         clock.tick(snake_speed)
