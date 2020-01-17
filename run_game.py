@@ -5,6 +5,7 @@ import numpy as np
 import scipy.special
 from collections import defaultdict
 import pandas as pd
+from maze import Maze
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -20,8 +21,8 @@ red = (255,0,0)#(213, 50, 80)
 green = (0, 255, 0)
 blue = (50, 153, 213)
 
-maze_w = 10
-maze_h = 10
+maze_w = 20
+maze_h = 20
 snake_block = 10
 
 dis_width = maze_w * snake_block #600
@@ -32,111 +33,12 @@ pygame.display.set_caption('Snake Game by Edureka')
  
 clock = pygame.time.Clock()
  
-snake_speed = 15
+snake_speed = 120
  
 font_style = pygame.font.SysFont("bahnschrift", 15)
 score_font = pygame.font.SysFont("comicsansms", 15)
 
-class Node:
-    def __init__(self, x, y, p, c):
-        self.x = x
-        self.y = y
-        self.coor = (x, y)
-        self.parent = p # p is a tuple in the form (x,y)
-        self.child = c # c is a tuple in the form (x,y)
-        self.number = -1
-class Maze:
-    def __init__(self, width, height):
-        self.nodes = [] # list of nodes
-        self.w = width
-        self.h = height
-        self.start = Node(0,0,-1, (1,0))
-        self.end = Node(0, height-1, (1, height-1), -1)
-    def generate_hamiltonian_path(self):
-        reverse = -1
-        for j in range(self.h):
-            reverse *= -1
-            for i in range(self.w)[::reverse]:
-                if (i,j) == self.start.coor:
-                    self.nodes.append(self.start)
-                    continue
-                if (i,j) == self.end.coor:
-                    self.nodes.append(self.end)
-                    continue
-                if i > 0 and i < self.w-1:
-                    self.nodes.append(Node(i, j, (i-reverse, j), (i+reverse, j)))
-                else:
-                    if j%2==0:
-                        self.nodes.append(Node(i, j, (i, j-1), (i+1, j)) if i == 0 else Node(i, j, (i-1, j), (i, j+1)))
-                    else:
-                        self.nodes.append(Node(i, j, (i+1, j), (i, j+1)) if i == 0 else Node(i, j, (i, j-1), (i-1, j)))
-    def coor2idx(self,x,y):
-        return x + y*(self.w) if y%2==0 else self.w - 1 - x + y*(self.w)
-    def __get_neighbors(self, node):
-        x, y = node.coor
-        neighbors = []
-        steps = [(1,0), (-1,0), (0,1), (0,-1)]
-        for i,j in steps:
-            new_x, new_y = x+i, y+j
-            if new_x < 0 or new_x >= self.w or new_y < 0 or new_y >= self.h:
-                continue
-            if ((new_x,new_y) == node.child) or ((new_x,new_y) == node.parent):
-                continue
-            neighbors.append((new_x, new_y))
-        assert len(neighbors) > 0, "something wrong with neighborhood generation"
-        return neighbors
-    def are_neighbors(self, node1, node2):
-        return 1 if (abs(node1.x - node2.x) + abs(node1.y - node2.y)) < 2 else 0
-    def __fix_circuit(self, start, end):
-        # start and end are both tuples in the form (x, y)
-        current = start
-        current_parent = self.nodes[self.coor2idx(current[0], current[1])].parent
-        while current != end:
-            old = current
-            current = current_parent
-            current_parent = self.nodes[self.coor2idx(current[0], current[1])].parent
-            self.nodes[self.coor2idx(current[0], current[1])].parent = old
-            self.nodes[self.coor2idx(old[0], old[1])].child = current
-        self.nodes[self.coor2idx(start[0], start[1])].parent = -1
 
-
-        
-    def generate_cycle(self):
-        while not(self.are_neighbors(self.start, self.end)):
-            start_neighbors = self.__get_neighbors(self.start)
-            next_idx = np.random.choice(range(len(start_neighbors)))
-            end = start_neighbors[next_idx]
-            self.start.parent = end
-            start = self.nodes[self.coor2idx(end[0], end[1])].parent
-            self.start = self.nodes[self.coor2idx(start[0], start[1])]
-            self.__fix_circuit(start, end)
-        self.start.parent = self.end.coor
-        self.end.child = self.start.coor
-        self.path = self.get_path()
-    def get_path(self):
-        path = []
-        current = self.start.coor
-        i = 0
-        while (current != self.start.coor) or (i==0):
-            path.append(current)
-            self.nodes[self.coor2idx(current[0], current[1])].number = i
-            i += 1
-            current = self.nodes[self.coor2idx(current[0], current[1])].child
-            if current == -1:
-                break
-        return path
-    def draw_path(self):
-        plt.figure(figsize=(16,16))
-        path = self.get_path()
-        x, y = [], []
-        for i, j in path:
-            x.append(i)
-            y.append(j)
-        plt.plot(x, y, '--x')
-#         for i in range(len(x)):
-#             plt.annotate(i, (x[i], y[i]))
- 
- 
 def Your_score(score):
     value = score_font.render("Score: " + str(score), True, yellow)
     dis.blit(value, [dis_height-70, 0])
@@ -165,11 +67,64 @@ def gameLoop():
     print(maze.path)
     
     step_count=0
-    def next_step(head):
+    def path_distance(source_no, target_no):
+        return (target_no - source_no) % (maze_h*maze_w)
+    def next_step(head, tail, food):
         head2 = head[0], maze.h - 1 - head[1]
-        current_index = maze.path.index(head2)
-        next_coor = maze.path[(current_index+1)%len(maze.path)]
-        step = tuple(np.array(head2)-np.array(next_coor))
+        tail2 = tail[0], maze.h - 1 - tail[1]
+        food2 = food[0], maze.h - 1 - food[1]
+        head_num = maze.nodes[maze.coor2idx(head2[0], head2[1])].number
+        tail_num = maze.nodes[maze.coor2idx(tail2[0], tail2[1])].number
+        food_num = maze.nodes[maze.coor2idx(food2[0], food2[1])].number
+        dist_food = path_distance(head_num, food_num)
+        dist_tail = path_distance(
+            head_num, tail_num) if head_num != tail_num else (maze_h*maze_w)-1
+        cutting_amount = dist_tail - 4
+        empty_sq = (maze_h*maze_w) - len(snake_List) - 1
+        if empty_sq < (maze_h*maze_w)/2:
+            cutting_amount = 0 
+        elif dist_food < dist_tail:
+            cutting_amount -= 1
+            cutting_amount -= 10 if ((dist_tail - dist_food)*4) > empty_sq else 0
+        cutting_desired = dist_food
+        cutting_amount = cutting_desired if cutting_desired < cutting_amount else cutting_amount
+        cutting_amount = 0 if cutting_amount < 0 else cutting_amount
+
+        best_dis = -1
+        best_dir = None
+        for i, j in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+            new_x, new_y = head2[0]+i, head2[1]+j
+            if new_x < 0 or new_x >= maze_w or new_y < 0 or new_y >= maze_h or [new_x, new_y] in snake_List:
+                continue
+            path_num = maze.nodes[maze.coor2idx(new_x, new_y)].number
+            # temp_head_num = head_num
+            # if head_num > tail_num:
+            #     temp_head_num = head_num + (maze_h*maze_w)
+            #     path_num += (maze_h*maze_w)
+            # if (path_num >= tail_num) and (path_num <= temp_head_num):
+            #     continue
+            path_dist = path_distance(head_num, path_num)
+            # if path_dist >= dist_tail:
+            #     continue
+            if (path_dist <= cutting_amount) and (path_dist > best_dis): 
+                best_dis = path_dist
+                best_dir = (-i, -j)
+        # print('###################################################################')
+        # print(dist_food)
+        # print(dist_tail)
+        # print(cutting_amount)
+        # print(best_dis)
+        # print('###################################################################')
+        if best_dis >= 0:
+            step = best_dir
+            # print('shortcuttttttttttttttttttttttttttttttttttttttttttttttttttt')
+        else:
+            current_index = maze.path.index(head2)
+            next_coor = maze.path[(current_index+1)%len(maze.path)]
+            step = tuple(np.array(head2)-np.array(next_coor))
+        
+
+
 
         # input('>')
         if step == (1,0):
@@ -197,7 +152,6 @@ def gameLoop():
     foody = round(random.randrange(0, dis_height - snake_block) / 10.0) * 10.0
  
     while not game_over:
-        
         while game_close == True:
             dis.fill(black)
             score=Length_of_snake - 1
@@ -224,7 +178,14 @@ def gameLoop():
         #     if event.type == pygame.QUIT:
         #         game_over = True
             # print((x1//snake_block, y1//snake_block))
-        step = next_step((x1//snake_block, y1//snake_block))
+        if len(snake_List) == 0:
+            step = next_step((x1//snake_block, y1//snake_block),
+                             (x1//snake_block, y1//snake_block),
+                             (foodx//snake_block, foody//snake_block))
+        else:
+            step = next_step((x1//snake_block, y1//snake_block),
+                             tuple(np.array(snake_List[0])//snake_block), 
+                             (foodx//snake_block, foody//snake_block))
         step_count+=1
             # if event.type == pygame.KEYDOWN:
                 #i = random.randint(1,4)
@@ -254,7 +215,7 @@ def gameLoop():
         x1 += x1_change
         y1 += y1_change
         dis.fill(black)
-        pygame.draw.rect(dis, red, [foodx, foody, snake_block, snake_block])
+        pygame.draw.rect(dis, red, [foodx, foody, snake_block-1, snake_block-1])
         snake_Head = []
         snake_Head.append(x1)
         snake_Head.append(y1)
