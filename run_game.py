@@ -21,7 +21,7 @@ red = (255,0,0)#(213, 50, 80)
 green = (0, 255, 0)
 blue = (50, 153, 213)
 
-maze_w = 20
+maze_w = 40
 maze_h = 20
 snake_block = 10
 
@@ -33,7 +33,7 @@ pygame.display.set_caption('Snake Game by Edureka')
  
 clock = pygame.time.Clock()
  
-snake_speed = 120
+snake_speed = 240
  
 font_style = pygame.font.SysFont("bahnschrift", 15)
 score_font = pygame.font.SysFont("comicsansms", 15)
