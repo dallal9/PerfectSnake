@@ -21,8 +21,8 @@ red = (255,0,0)#(213, 50, 80)
 green = (0, 255, 0)
 blue = (50, 153, 213)
 
-maze_w = 30
-maze_h = 10
+maze_w = int(input('please enter maze width: '))
+maze_h = int(input('please enter maze height: '))
 snake_block = 10
 
 dis_width = maze_w * snake_block #600
@@ -33,7 +33,7 @@ pygame.display.set_caption('Snake Game by Edureka')
  
 clock = pygame.time.Clock()
 
-snake_speed = 240
+snake_speed = 60 
 
 font_style = pygame.font.SysFont("bahnschrift", 15)
 score_font = pygame.font.SysFont("comicsansms", 15)
@@ -59,6 +59,7 @@ UP, LEFT, RIGHT, DOWN = range(4)
  
  
 def gameLoop():
+    global snake_speed
     game_over = False
     game_close = False
     maze = Maze(maze_w, maze_h)
@@ -79,7 +80,7 @@ def gameLoop():
         dist_food = path_distance(head_num, food_num)
         dist_tail = path_distance(
             head_num, tail_num) if head_num != tail_num else (maze_h*maze_w)-1
-        cutting_amount = dist_tail - 4
+        cutting_amount = dist_tail - 8
         empty_sq = (maze_h*maze_w) - len(snake_List) - 1
         if empty_sq < (maze_h*maze_w)/2:
             cutting_amount = 0 
@@ -177,6 +178,10 @@ def gameLoop():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_q:
                     game_close = True
+                elif event.key == pygame.K_d:
+                    snake_speed *= 2
+                elif event.key == pygame.K_a:
+                    snake_speed /= 2
                 elif event.key == pygame.K_SPACE:
                     pause = True
                     while pause == True:
