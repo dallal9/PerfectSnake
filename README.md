@@ -14,3 +14,10 @@ A solver for snake game
 ```
 $ python run_game.py
 ```
+
+## Controls 
+```
+d = speed up
+a = speed down
+space = pause
+```
